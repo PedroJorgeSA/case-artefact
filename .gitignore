@@ -1,0 +1,17 @@
+# Segredos
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Estado local do agente (histórico de conversas e chamados)
+.sessions/
+.handoffs/
+
+# Enunciado do desafio (material da Artefact, não publicar)
+desafio_tecnico_ai_eng_artefact.pdf
+
+.DS_Store
