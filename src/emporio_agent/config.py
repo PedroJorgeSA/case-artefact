@@ -18,8 +18,10 @@ load_dotenv(ROOT_DIR / ".env")
 # Campo Grande/MS não tem horário de verão: UTC-4 o ano todo.
 STORE_TZ = ZoneInfo("America/Campo_Grande")
 
-MODEL = os.getenv("EMPORIO_MODEL", "claude-opus-5-5")
-EFFORT = os.getenv("EMPORIO_EFFORT", "medium")
+API_KEY = os.getenv("GROQ_API_KEY")
+MODEL = os.getenv("EMPORIO_MODEL") or "openai/gpt-oss-120b"
+# Quanto o modelo "pensa" antes de responder: low | medium | high.
+EFFORT = os.getenv("EMPORIO_EFFORT") or "medium"
 MAX_TOOL_ITERATIONS = 8
 
 

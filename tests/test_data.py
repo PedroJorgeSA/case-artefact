@@ -44,6 +44,7 @@ def test_search_by_model_name(store):
     result = store.search_products("Takamine GD20")
     assert result["produtos"][0]["nome"] == "Takamine GD20 Dreadnought Natural"
     assert "promocao" not in result["produtos"][0]  # promoção 4 está inativa
+    assert "preco_pix" in result["produtos"][0]["condicoes_pagamento"]  # já vem na busca
 
 
 def test_search_excludes_out_of_stock(store):

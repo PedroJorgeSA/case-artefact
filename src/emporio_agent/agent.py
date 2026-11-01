@@ -1,20 +1,18 @@
-"""Loop do agente: Claude API + function calling, com histórico persistido em JSON.
+"""Loop do agente: API do Groq + function calling, com histórico persistido em JSON.
 
-Loop manual (em vez do tool runner beta do SDK) para ter controle explícito de
-limite de iterações, log das chamadas de ferramenta e persistência da sessão.
+Loop manual para ter controle explícito de limite de iterações, log das chamadas
+de ferramenta e persistência da sessão.
 """
 
 import json
 import uuid
 from dataclasses import dataclass, field
 
-import anthropic
+import groq
 
 from . import config
 from .prompts import build_system
 from .tools import TOOLS, ToolExecutor
-
-FALLBACK_BETA = "server-side-fallback-2026-07-01"
 
 
 @dataclass
@@ -32,14 +30,14 @@ class Reply:
 
 
 class Agent:
-    def __init__(self, session_id: str | None = None, client: anthropic.Anthropic | None = None):
-        self.client = client or anthropic.Anthropic()
+    def __init__(self, session_id: str | None = None, client: groq.Groq | None = None):
+        self.client = client or groq.Groq(api_key=config.API_KEY, max_retries=5)
         self.executor = ToolExecutor()
         self.session_id = session_id or uuid.uuid4().hex[:8]
         self.messages: list[dict] = []
         # Data/hora fixada no início da sessão: o system prompt fica idêntico entre
-        # mensagens e o histórico inteiro aproveita o cache.
-        self.system = build_system(config.now())
+        # mensagens, o que permite ao Groq reaproveitar o prefixo em cache.
+        self.system = {"role": "system", "content": build_system(config.now())}
         self._load()
 
     @property
@@ -58,18 +56,14 @@ class Agent:
         )
 
     def _call_model(self):
-        return self.client.beta.messages.create(
+        return self.client.chat.completions.create(
             model=config.MODEL,
-            max_tokens=16000,
-            system=self.system,
+            messages=[self.system, *self.messages],
             tools=TOOLS,
-            messages=self.messages,
-            output_config={"effort": config.EFFORT},
-            cache_control={"type": "ephemeral"},
-            # Se um classificador de segurança recusar, a API refaz a chamada no
-            # modelo de fallback recomendado em vez de devolver a recusa.
-            betas=[FALLBACK_BETA],
-            fallbacks="default",
+            tool_choice="auto",
+            reasoning_effort=config.EFFORT,
+            temperature=0.3,
+            max_completion_tokens=4096,
         )
 
     def send(self, user_text: str) -> Reply:
@@ -77,32 +71,29 @@ class Agent:
         reply = Reply(text="")
 
         for _ in range(config.MAX_TOOL_ITERATIONS):
-            response = self._call_model()
-            if response.stop_reason == "refusal":
-                # Recusa sem fallback possível: não entra no histórico.
-                reply.text = "Desculpe, não consigo ajudar com isso. Posso ajudar com algo da loja?"
+            message = self._call_model().choices[0].message
+            # Só os campos que a API aceita de volta (o raciocínio interno fica de fora).
+            assistant = {"role": "assistant", "content": message.content or ""}
+            if message.tool_calls:
+                assistant["tool_calls"] = [
+                    {"id": c.id, "type": "function", "function": {"name": c.function.name, "arguments": c.function.arguments}}
+                    for c in message.tool_calls
+                ]
+            self.messages.append(assistant)
+
+            if not message.tool_calls:
+                reply.text = (message.content or "").strip()
                 break
 
-            # O histórico é só acrescentado (nunca editado) e guarda os blocos
-            # completos, inclusive os de thinking, como a API exige.
-            self.messages.append(
-                {"role": "assistant", "content": [b.model_dump(exclude_none=True) for b in response.content]}
-            )
-            if response.stop_reason != "tool_use":
-                reply.text = "\n".join(b.text for b in response.content if b.type == "text").strip()
-                break
-
-            results = []
-            for block in response.content:
-                if block.type != "tool_use":
-                    continue
-                output, is_error = self.executor.run(block.name, block.input)
-                reply.tool_calls.append(ToolCall(block.name, block.input, output, is_error))
-                results.append(
-                    {"type": "tool_result", "tool_use_id": block.id, "content": output, "is_error": is_error}
-                )
-            # Todos os resultados de uma rodada vão juntos numa única mensagem.
-            self.messages.append({"role": "user", "content": results})
+            for call in message.tool_calls:
+                try:
+                    args = json.loads(call.function.arguments or "{}")
+                    output, is_error = self.executor.run(call.function.name, args)
+                except json.JSONDecodeError:
+                    args = {}
+                    output, is_error = json.dumps({"erro": "Argumentos em JSON inválido."}), True
+                reply.tool_calls.append(ToolCall(call.function.name, args, output, is_error))
+                self.messages.append({"role": "tool", "tool_call_id": call.id, "content": output})
         else:
             reply.text = (
                 "Opa, essa ficou mais complicada do que eu esperava. Vou pedir para alguém da equipe te "

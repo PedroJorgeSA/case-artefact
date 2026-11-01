@@ -191,7 +191,6 @@ class Store:
         details = self._product_summary(row)
         details["descricao"] = row.description
         details["especificacoes"] = row.specs
-        details["condicoes_pagamento"] = payment_conditions(row.price_brl, self._promo_price(row)[1])
         return details
 
     def _promo_price(self, row) -> tuple[float, float | None]:
@@ -219,6 +218,8 @@ class Store:
                 "preco_original": brl(row.price_brl),
                 "preco_promocional": brl(self._promo_price(row)[0]),
             }
+        # Já vem na busca para o modelo não precisar de uma chamada extra por produto.
+        summary["condicoes_pagamento"] = payment_conditions(row.price_brl, self._promo_price(row)[1])
         return summary
 
     @staticmethod

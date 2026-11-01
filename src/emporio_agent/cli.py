@@ -3,7 +3,7 @@
 import argparse
 import json
 
-import anthropic
+import groq
 
 from .agent import Agent
 
@@ -33,16 +33,16 @@ def main() -> None:
 
         try:
             reply = agent.send(user_text)
-        except anthropic.AuthenticationError:
-            print("\n[erro] Credencial inválida. Confira ANTHROPIC_API_KEY no arquivo .env.")
+        except groq.AuthenticationError:
+            print("\n[erro] Credencial inválida. Confira GROQ_API_KEY no arquivo .env.")
             break
-        except anthropic.RateLimitError:
+        except groq.RateLimitError:
             print("\n[erro] Limite de requisições atingido. Tente de novo em instantes.")
             continue
-        except anthropic.APIStatusError as e:
+        except groq.APIStatusError as e:
             print(f"\n[erro] API retornou {e.status_code}: {e.message}")
             continue
-        except anthropic.APIConnectionError:
+        except groq.APIConnectionError:
             print("\n[erro] Sem conexão com a API.")
             continue
 

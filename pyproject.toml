@@ -5,7 +5,7 @@ description = "Agente de atendimento da Empório da Música (desafio técnico AI
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "anthropic>=1.0",
+    "groq>=1.7.0",
     "pandas>=2.2",
     "python-dotenv>=1.0",
 ]

@@ -16,101 +16,101 @@ NULLABLE_STR = {"type": ["string", "null"]}
 NULLABLE_NUM = {"type": ["number", "null"]}
 
 
-def _schema(properties: dict) -> dict:
-    # strict: true exige additionalProperties false e todos os campos em required;
-    # campos opcionais viram tipos que aceitam null.
+def _tool(name: str, description: str, properties: dict) -> dict:
+    """Ferramenta no formato de function calling da API do Groq (compatível com OpenAI).
+
+    Todos os campos ficam em required e os opcionais aceitam null: o modelo sempre
+    manda o objeto completo, o que simplifica o despacho em ToolExecutor.
+    """
     return {
-        "type": "object",
-        "properties": properties,
-        "required": list(properties),
-        "additionalProperties": False,
+        "type": "function",
+        "function": {
+            "name": name,
+            "description": description,
+            "parameters": {
+                "type": "object",
+                "properties": properties,
+                "required": list(properties),
+                "additionalProperties": False,
+            },
+        },
     }
 
 
 TOOLS = [
-    {
-        "name": "buscar_produtos",
-        "description": (
+    _tool(
+        "buscar_produtos",
+        (
             "Busca instrumentos no catálogo da loja, com preço, promoção ativa e disponibilidade. "
             "Use sempre que o cliente perguntar sobre produtos, preços, modelos, marcas ou estoque. "
+            "Já traz o preço no PIX e o parcelamento máximo sem juros de cada item. "
             "Por padrão retorna só itens disponíveis para venda."
         ),
-        "input_schema": _schema(
-            {
-                "termo": {
-                    **NULLABLE_STR,
-                    "description": "Palavras-chave como marca, modelo ou tipo (ex.: 'Takamine GD20', 'nylon', 'elétrico').",
-                },
-                "categoria": {
-                    **NULLABLE_STR,
-                    "description": "Nome da categoria (ex.: 'Violões', 'Ukuleles', 'Guitarras').",
-                },
-                "preco_min": {**NULLABLE_NUM, "description": "Preço mínimo em reais."},
-                "preco_max": {**NULLABLE_NUM, "description": "Preço máximo em reais."},
-                "incluir_indisponiveis": {
-                    "type": "boolean",
-                    "description": "true para incluir itens sem estoque, descontinuados ou em lançamento.",
-                },
-            }
+        {
+            "termo": {
+                **NULLABLE_STR,
+                "description": "Palavras-chave como marca, modelo ou tipo (ex.: 'Takamine GD20', 'nylon', 'elétrico').",
+            },
+            "categoria": {
+                **NULLABLE_STR,
+                "description": "Nome da categoria (ex.: 'Violões', 'Ukuleles', 'Guitarras').",
+            },
+            "preco_min": {**NULLABLE_NUM, "description": "Preço mínimo em reais."},
+            "preco_max": {**NULLABLE_NUM, "description": "Preço máximo em reais."},
+            "incluir_indisponiveis": {
+                "type": "boolean",
+                "description": "true para incluir itens sem estoque, descontinuados ou em lançamento.",
+            },
+        },
+    ),
+    _tool(
+        "detalhes_produto",
+        (
+            "Descrição e especificações técnicas de um produto pelo ID, além de preço, promoção "
+            "e condições de pagamento. Use quando o cliente quiser saber mais sobre um modelo."
         ),
-        "strict": True,
-    },
-    {
-        "name": "detalhes_produto",
-        "description": (
-            "Detalhes de um produto pelo ID: especificações técnicas, descrição, promoção ativa e "
-            "condições de pagamento já calculadas (preço no PIX, parcelamento máximo sem juros)."
-        ),
-        "input_schema": _schema({"produto_id": {"type": "integer", "description": "ID do produto."}}),
-        "strict": True,
-    },
-    {
-        "name": "listar_categorias",
-        "description": "Lista as categorias da loja e quantos produtos cada uma tem à venda.",
-        "input_schema": _schema({}),
-        "strict": True,
-    },
-    {
-        "name": "consultar_pedido",
-        "description": (
+        {"produto_id": {"type": "integer", "description": "ID do produto."}},
+    ),
+    _tool(
+        "listar_categorias",
+        "Lista as categorias da loja e quantos produtos cada uma tem à venda.",
+        {},
+    ),
+    _tool(
+        "consultar_pedido",
+        (
             "Consulta status, itens, rastreio e prazos de troca/devolução de um pedido. "
             "Exige o número do pedido E o e-mail ou telefone cadastrado, que o cliente deve informar. "
             "Nunca invente nem suponha esses dados."
         ),
-        "input_schema": _schema(
-            {
-                "numero_pedido": {"type": "integer", "description": "Número do pedido."},
-                "email_ou_telefone": {
-                    "type": "string",
-                    "description": "E-mail ou telefone informado pelo cliente para confirmar a identidade.",
-                },
-            }
-        ),
-        "strict": True,
-    },
-    {
-        "name": "encaminhar_para_atendente",
-        "description": (
+        {
+            "numero_pedido": {"type": "integer", "description": "Número do pedido."},
+            "email_ou_telefone": {
+                "type": "string",
+                "description": "E-mail ou telefone informado pelo cliente para confirmar a identidade.",
+            },
+        },
+    ),
+    _tool(
+        "encaminhar_para_atendente",
+        (
             "Registra um chamado para a equipe humana. Use em reclamações, pedidos de troca, "
             "devolução ou garantia, dúvidas de política que o manual não resolve, ou quando o "
             "cliente pedir para falar com uma pessoa."
         ),
-        "input_schema": _schema(
-            {
-                "motivo": {
-                    "type": "string",
-                    "enum": ["reclamacao", "troca_devolucao", "garantia", "duvida_politica", "outro"],
-                },
-                "resumo": {"type": "string", "description": "Resumo objetivo do caso para a equipe."},
-                "contato_cliente": {
-                    **NULLABLE_STR,
-                    "description": "Nome e telefone/e-mail para retorno, se o cliente informou.",
-                },
-                "numero_pedido": {"type": ["integer", "null"]},
-            }
-        ),
-        "strict": True,
-    },
+        {
+            "motivo": {
+                "type": "string",
+                "enum": ["reclamacao", "troca_devolucao", "garantia", "duvida_politica", "outro"],
+            },
+            "resumo": {"type": "string", "description": "Resumo objetivo do caso para a equipe."},
+            "contato_cliente": {
+                **NULLABLE_STR,
+                "description": "Nome e telefone/e-mail para retorno, se o cliente informou.",
+            },
+            "numero_pedido": {"type": ["integer", "null"]},
+        },
+    ),
 ]
 
 
@@ -124,12 +124,13 @@ class ToolExecutor:
         if handler is None:
             return json.dumps({"erro": f"Ferramenta desconhecida: {name}"}), True
         try:
+            # Campos opcionais têm default: se o modelo omitir algum, a chamada segue.
             result = handler(**args)
         except Exception as exc:  # noqa: BLE001 — o erro volta para o modelo tratar
             return json.dumps({"erro": f"{type(exc).__name__}: {exc}"}), True
         return json.dumps(result, ensure_ascii=False, default=str), "erro" in result
 
-    def _buscar_produtos(self, termo, categoria, preco_min, preco_max, incluir_indisponiveis):
+    def _buscar_produtos(self, termo=None, categoria=None, preco_min=None, preco_max=None, incluir_indisponiveis=False):
         return self.store.search_products(termo, categoria, preco_min, preco_max, incluir_indisponiveis)
 
     def _detalhes_produto(self, produto_id):
@@ -141,7 +142,7 @@ class ToolExecutor:
     def _consultar_pedido(self, numero_pedido, email_ou_telefone):
         return self.store.get_order(numero_pedido, email_ou_telefone, config.now().date())
 
-    def _encaminhar_para_atendente(self, motivo, resumo, contato_cliente, numero_pedido):
+    def _encaminhar_para_atendente(self, motivo, resumo, contato_cliente=None, numero_pedido=None):
         ticket = {
             "protocolo": uuid.uuid4().hex[:8].upper(),
             "criado_em": datetime.now(config.STORE_TZ).isoformat(timespec="seconds"),

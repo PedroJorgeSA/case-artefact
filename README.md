@@ -1,67 +1,108 @@
-# Empório da Música — Agente de Atendimento
+# Empório da Música: assistente de atendimento
 
-Protótipo da **Lia**, assistente virtual da Empório da Música (loja fictícia de instrumentos em Campo Grande/MS). Ela atende por mensagem de texto, consulta catálogo, promoções e pedidos em tempo real e aplica o manual de políticas da loja.
+Este projeto é a **Lia**, uma assistente virtual para a Empório da Música, uma loja (fictícia) de instrumentos musicais em Campo Grande/MS.
 
-> 🚧 Em construção. Seções marcadas com TODO serão completadas ao longo do desenvolvimento.
+Ela conversa com o cliente por texto, como no WhatsApp, e consegue:
+
+- procurar instrumentos e dizer preço, estoque e promoções;
+- calcular o preço no PIX e em quantas vezes dá para parcelar;
+- consultar um pedido (só se o cliente provar que é dele);
+- responder dúvidas sobre trocas, garantia, frete e horários;
+- passar o caso para uma pessoa da equipe quando precisa.
 
 ## Como rodar
 
-Pré-requisitos: [uv](https://docs.astral.sh/uv/) e uma chave da Claude API.
+Você precisa do [uv](https://docs.astral.sh/uv/) instalado e de uma chave grátis do Groq ([console.groq.com/keys](https://console.groq.com/keys)).
 
 ```bash
-cp .env.example .env        # preencha ANTHROPIC_API_KEY
-uv sync                     # cria o ambiente com Python 3.12 e instala dependências
-uv run emporio              # abre o chat no terminal
-uv run emporio --debug      # mostra as chamadas de ferramenta
-uv run pytest               # testes das regras de negócio (não chamam o LLM)
+cp .env.example .env     # depois, cole sua chave em GROQ_API_KEY
+uv sync                  # instala tudo
+uv run emporio           # abre o chat no terminal
 ```
 
-Para continuar uma conversa anterior: `uv run emporio --session <id>`.
+Outros comandos úteis:
 
-## Arquitetura
-
-```
-mensagem ─► Agent (loop de tool use) ─► Claude API
-                 │                          │
-                 │◄──── tool_use ───────────┘
-                 ▼
-           ToolExecutor ─► Store (pandas sobre os CSVs + regras de negócio)
+```bash
+uv run emporio --debug           # mostra quais ferramentas a Lia usou em cada resposta
+uv run emporio --session abc123  # continua uma conversa antiga
+uv run pytest                    # roda os testes (não gastam chamadas de IA)
 ```
 
-| Arquivo | Papel |
+Para sair do chat, digite `sair`.
+
+## Como funciona, em uma imagem
+
+```
+Cliente escreve
+     │
+     ▼
+  Agente  ──────►  Modelo de IA (Groq)
+     ▲                  │
+     │      "preciso buscar violões até R$1000"
+     │                  ▼
+     └────────  Ferramentas  ──►  Planilhas da loja (CSV)
+```
+
+1. O cliente manda uma mensagem.
+2. O modelo de IA lê a mensagem e decide se precisa de algum dado da loja.
+3. Se precisar, ele pede para uma **ferramenta** (uma função Python) buscar o dado.
+4. A ferramenta lê as planilhas, faz as contas e devolve o resultado.
+5. O modelo usa esse resultado para escrever a resposta.
+
+### Onde fica cada coisa
+
+| Arquivo | O que faz |
 |---|---|
-| `src/emporio_agent/agent.py` | Loop do agente, persistência da sessão em `.sessions/` |
-| `src/emporio_agent/tools.py` | Definição das 5 ferramentas e despacho |
-| `src/emporio_agent/data.py` | Leitura dos CSVs; preço, PIX, parcelamento, prazos de troca e horário calculados em código |
-| `src/emporio_agent/prompts.py` | Persona, regras de uso das ferramentas e manual de políticas |
-| `knowledge/politicas.md` | Manual transcrito do PDF, com notas de curadoria |
+| `src/emporio_agent/data.py` | Lê as planilhas e faz todas as contas (PIX, parcelas, prazos de troca, horário da loja) |
+| `src/emporio_agent/tools.py` | As 5 ferramentas que a IA pode usar |
+| `src/emporio_agent/prompts.py` | As instruções da Lia: jeito de falar, regras e o manual da loja |
+| `src/emporio_agent/agent.py` | O "vai e volta" entre a IA e as ferramentas |
+| `src/emporio_agent/cli.py` | O chat no terminal |
+| `knowledge/politicas.md` | O manual da loja passado do PDF para texto |
+| `tests/test_data.py` | Testes das regras de negócio |
 
-## Decisões técnicas
+As 5 ferramentas são: `buscar_produtos`, `detalhes_produto`, `listar_categorias`, `consultar_pedido` e `encaminhar_para_atendente`.
 
-TODO: detalhar. Resumo das escolhas até aqui:
+## Por que foi feito assim
 
-- **Híbrido: function calling para dados + manual inteiro no prompt.** Os dados são pequenos (64 produtos, 20 pedidos) e estruturados, então ferramentas tipadas são mais precisas que busca vetorial. O manual tem ~3 mil tokens: cabe no prompt e fica em cache, sem a complexidade nem o risco de recuperação incompleta de um RAG.
-- **Ferramentas estreitas em vez de text-to-SQL.** O modelo nunca vê a tabela de clientes; `consultar_pedido` só libera dados com número do pedido + e-mail ou telefone (LGPD).
-- **Contas em código, não no LLM.** Desconto PIX (não cumulativo com promoção), parcelamento mínimo por faixa e prazos de devolução são calculados em `data.py` e testados.
-- **Modelo:** `claude-opus-5-5` com esforço `medium`, configurável no `.env`. Fallback automático da API habilitado para recusas de classificadores de segurança.
-- **Loop manual** em vez do tool runner (beta) do SDK, para controlar limite de iterações, logs e persistência.
+**As contas são feitas em Python, não pela IA.**
+Modelos de linguagem erram conta com facilidade. Por isso o desconto do PIX, o número de parcelas e os prazos de troca são calculados no código e conferidos pelos testes. A IA só repete o resultado.
 
-## Premissas sobre os dados
+**Ferramentas para os dados, manual inteiro nas instruções.**
+São só 65 produtos e 20 pedidos, então uma busca simples em Python resolve, sem banco vetorial (RAG). O manual da loja é curto (cerca de 3 mil tokens) e cabe inteiro nas instruções da Lia, então ela sempre tem a regra completa à mão.
 
-TODO: completar. Já identificadas:
+**A IA nunca vê a lista de clientes.**
+Para consultar um pedido, a ferramenta exige o número do pedido **e** o e-mail ou telefone do dono. Se não bater, não mostra nada. Isso protege os dados pessoais (LGPD), mesmo que alguém tente enganar a IA.
 
-- Data de referência configurável (`EMPORIO_NOW`), porque os dados vão só até mar/2026.
-- Sem data real de entrega: a previsão de entrega é usada para contar o prazo de arrependimento.
-- Contradições do manual (telefone, e-mail, parcelamento) resolvidas em `knowledge/politicas.md`.
+**Modelo `openai/gpt-oss-120b` no Groq.**
+É um modelo aberto, bom em usar ferramentas, e o Groq tem plano gratuito. Dá para trocar o modelo no `.env` (`EMPORIO_MODEL`).
 
-## Limitações conhecidas e próximos passos
+**Data fixa para testes.**
+Os dados da loja vão só até março de 2026. A variável `EMPORIO_NOW` "congela" o relógio da Lia numa data (por padrão 25/03/2026 às 10h), assim as respostas sobre prazos e horário fazem sentido e dá para repetir as conversas.
 
-TODO
+## O que eu assumi sobre os dados
 
-## Uso de assistentes de código
+- O manual tem algumas contradições (dois telefones, dois e-mails, regras de parcelamento diferentes). Escolhi uma versão de cada e expliquei o motivo no fim de `knowledge/politicas.md`.
+- Os pedidos não têm a data real de entrega, só a data prevista. Uso a data prevista para contar os 7 dias de arrependimento.
+- Algumas categorias (como instrumentos de sopro) existem, mas não têm produto. A Lia diz que não tem no momento, sem inventar modelos.
 
-TODO
+## Limitações
+
+- **Lento no plano grátis do Groq.** O limite é de 8 mil tokens por minuto e cada chamada usa uns 3,5 mil. Quando a Lia precisa de várias ferramentas numa resposta, ela pode demorar perto de um minuto esperando o limite liberar.
+- **Os chamados para atendentes vão para um arquivo** (`.handoffs/chamados.jsonl`), não para um sistema de verdade.
+- **As conversas ficam salvas em arquivos JSON** (`.sessions/`). Numa loja real, isso iria para um banco de dados.
+- **Feriados não são considerados** no horário de funcionamento.
+
+## Uso de assistentes de IA
+
+Usei o Claude Code (Anthropic) como par de programação. Ele ajudou a:
+
+- ler o PDF do desafio e as planilhas, e apontar inconsistências nos dados;
+- montar o esqueleto do projeto, as ferramentas e os testes;
+- trocar a integração para o Groq e escrever este README.
+
+As decisões de arquitetura, as premissas e a revisão final foram minhas.
 
 ## Exemplos de conversa
 
-Ver pasta [`conversas/`](conversas/). TODO
+Ficam na pasta [`conversas/`](conversas/). *(em construção)*
