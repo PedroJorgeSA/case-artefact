@@ -297,7 +297,7 @@ textarea:focus-visible { outline: none; }
 .send:active { transform: scale(0.97); }
 .send:disabled { opacity: 0.35; cursor: default; }
 
-.hint { margin: 8px 0 0; font-size: 12px; line-height: 16px; color: var(--text-3); }
+.hint { margin: 8px auto 0; font-size: 12px; line-height: 16px; color: var(--text-3); }
 
 /* Painel de consultas */
 
