@@ -22,3 +22,6 @@ desafio_tecnico_ai_eng_artefact.pdf
 # Modelo de embeddings, vetores e avaliações dos clientes
 .cache/
 .feedback/
+
+# Arquivos de entrega (PDF do formulário)
+entrega/
