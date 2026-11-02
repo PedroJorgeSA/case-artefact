@@ -1,30 +1,41 @@
 # 01 · Busca por faixa de preço e condições de pagamento
 
-**O que mostra:** Busca com filtro de categoria e preço, resposta curta com poucas opções e PIX/parcelamento calculados em código.
+**O que mostra:** Busca com filtro de categoria e preço, poucas opções com opções de resposta rápida e PIX/parcelamento calculados em código.
 
-Modelo `openai/gpt-oss-120b` · data simulada quarta-feira, 25/03/2026 10:00 · gerado por `scripts/gerar_conversas.py` · na interface: `/?sessao=exemplo-01`
+Modelo `openai/gpt-oss-120b` · busca no manual: hibrido · data simulada quarta-feira, 25/03/2026 10:00 · gerado por `scripts/gerar_conversas.py` · na interface: `/?sessao=exemplo-01`
+
+Linhas com `>` mostram o que aconteceu no grafo entre a mensagem e a resposta.
 
 ---
 
 **Cliente:** Oi! Tô procurando um violão pra começar a tocar, até uns mil reais
 
+> intenção: produto
 > `buscar_produtos(categoria="Violões", preco_max=1000)` → ok
 
-**Lia:** Oi! Tudo bem? 😊 Tenho 12 violões na faixa de até R$ 1 000,00. Vou te mostrar os quatro mais baratos e a gente afina a escolha:
+**Lia:** Oi! Tenho boas opções de violões até R$ 1 000 pra quem está começando. No catálogo encontrei **12** modelos. Aqui vão quatro que se encaixam no seu orçamento:
 
-- **Tagima Memphis AC‑39 Nylon** – R$ 429,90 (PIX: **R$ 408,40**) – até 5x de R$ 85,98  
-- **Rozini RC‑104 Nylon Estudante** – R$ 459,90 (PIX: **R$ 436,90**) – até 5x de R$ 91,98  
-- **Shelby SN‑100 Folk Aço** – R$ 549,00 (PIX: **R$ 521,55**) – até 6x de R$ 91,50  
-- **Giannini GF‑1R Aço Folk** – R$ 579,90 (PIX: **R$ 550,90**) – até 6x de R$ 96,65  
+- **Tagima Memphis AC‑39 Nylon** – R$ 429,90 (PIX R$ 408,40) – até 5x de R$ 85,98  
+- **Rozini RC‑104 Nylon** – R$ 459,90 (PIX R$ 436,90) – até 5x de R$ 91,98  
+- **Shelby SN‑100 Folk Aço** – R$ 549,00 (PIX R$ 521,55) – até 6x de R$ 91,50  
+- **Giannini GF‑1R Aço Folk** – R$ 579,90 (PIX R$ 550,90) – até 6x de R$ 96,65  
 
-Você prefere corda de nylon (mais suave, ideal para iniciantes) ou aço (som mais brilhante)? Também me conta se busca algo mais clássico ou moderno, que eu já trago outras opções.
+Qual tipo de corda você prefere? Nylon costuma ser mais suave, ideal pra iniciantes; aço tem som mais brilhante.
+
+*Opções de resposta rápida:* Nylon · Aço
 
 **Cliente:** Prefiro nylon. Quanto fica o Yamaha C40 no PIX? E dá pra parcelar em quantas vezes?
 
-> `detalhes_produto(produto_id=0)` → erro
-
+> intenção: produto, politica
+> manual (roteador): §3.1, §3, §4.1
 > `buscar_produtos(categoria="Violões", termo="Yamaha C40")` → ok
 
-**Lia:** O Yamaha C40 Nylon Natural sai por **R$ 599,90** (preço de tabela). No PIX você paga **R$ 569,90** e pode parcelar em até **6x** de R$ 99,98, sem juros.  
+**Lia:** O Yamaha C40 Nylon Natural sai **R$ 569,90 no PIX** (preço à vista com 5 % de desconto) e pode ser parcelado em **até 6x sem juros**, com parcelas de R$ 99,98 cada. 😊
 
-Se quiser fechar a compra ou ver mais opções de violões de nylon, é só me avisar! 🎸
+Quer seguir com a compra ou precisa de mais alguma sugestão?
+
+---
+
+**Resultado esperado:**
+
+- [x] chamou buscar_produtos
