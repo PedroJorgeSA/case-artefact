@@ -93,6 +93,15 @@ TOOLS = [
         },
     ),
     _tool(
+        "consultar_manual",
+        (
+            "Busca seções do manual de políticas da loja (trocas, devoluções, garantia, frete, "
+            "pagamento, parcelamento, promoções, privacidade). Use quando a pergunta envolver uma "
+            "regra que não está nos trechos do manual já recebidos neste turno."
+        ),
+        {"pergunta": {"type": "string", "description": "A dúvida do cliente, em uma frase completa."}},
+    ),
+    _tool(
         "encaminhar_para_atendente",
         (
             "Registra um chamado para a equipe humana. Use em reclamações, pedidos de troca, "
