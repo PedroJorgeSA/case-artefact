@@ -83,3 +83,20 @@ def test_invalid_tool_arguments_go_back_as_error():
     reply = agent.send("detalhes")
     assert reply.tool_calls[0].is_error
     assert reply.text == "Pode repetir?"
+
+
+def test_old_tool_results_are_shortened_only_in_context():
+    agent = Agent(client=FakeClient())
+    long_result = "x" * 2000
+    agent.messages = [
+        {"role": "user", "content": "primeira"},
+        {"role": "assistant", "content": "", "tool_calls": []},
+        {"role": "tool", "tool_call_id": "c1", "content": long_result},
+        {"role": "assistant", "content": "ok"},
+        {"role": "user", "content": "segunda"},
+        {"role": "tool", "tool_call_id": "c2", "content": long_result},
+    ]
+    context = agent._context()
+    assert len(context[2]["content"]) < 600  # turno anterior: encurtado
+    assert context[5]["content"] == long_result  # turno atual: completo
+    assert agent.messages[2]["content"] == long_result  # histórico salvo intacto

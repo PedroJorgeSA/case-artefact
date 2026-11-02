@@ -77,6 +77,8 @@ def _error_message(exc: Exception) -> str:
         return "O limite gratuito do Groq continua esgotado. Tente de novo em um minuto."
     if isinstance(exc, groq.APIConnectionError):
         return "Sem conexão com a API do Groq."
+    if isinstance(exc, groq.APIStatusError) and exc.status_code == 413:
+        return "A conversa ficou grande demais para o limite gratuito do Groq. Comece uma nova conversa."
     if isinstance(exc, groq.APIStatusError):
         return f"A API do Groq respondeu com erro {exc.status_code}."
     return "Erro inesperado no servidor. Veja o terminal para detalhes."

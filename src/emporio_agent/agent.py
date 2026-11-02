@@ -22,6 +22,10 @@ from .prompts import build_system
 from .tools import TOOLS, ToolExecutor
 
 MAX_ATTEMPTS = 6
+# O plano gratuito do Groq limita cada chamada a 8 mil tokens, contando a
+# resposta reservada; por isso a reserva é curta e resultados antigos encolhem.
+MAX_COMPLETION_TOKENS = 1536
+OLD_TOOL_RESULT_CHARS = 400
 # O ID vira nome de arquivo em .sessions/, então só aceita caracteres seguros.
 SESSION_ID_PATTERN = re.compile(r"[A-Za-z0-9_-]{1,64}")
 ESCALATION_TEXT = (
@@ -91,18 +95,36 @@ class Agent:
             encoding="utf-8",
         )
 
+    def _context(self) -> list[dict]:
+        """Histórico enviado ao modelo, com resultados de turnos anteriores encurtados.
+
+        Preço e estoque devem ser consultados de novo de qualquer forma, então o
+        resultado completo só importa no turno atual. O histórico salvo fica intacto.
+        """
+        last_user = max((i for i, m in enumerate(self.messages) if m["role"] == "user"), default=0)
+        context = []
+        for i, message in enumerate(self.messages):
+            if i < last_user and message["role"] == "tool" and len(message["content"]) > OLD_TOOL_RESULT_CHARS:
+                message = {
+                    **message,
+                    "content": message["content"][:OLD_TOOL_RESULT_CHARS]
+                    + "… [resultado de uma mensagem anterior, encurtado; consulte de novo se precisar]",
+                }
+            context.append(message)
+        return context
+
     def _call_model(self) -> Iterator[Waiting]:
         """Chama o modelo. Gerador: avisa cada espera e, no fim, retorna a resposta."""
         for attempt in range(1, MAX_ATTEMPTS + 1):
             try:
                 return self.client.chat.completions.create(
                     model=config.MODEL,
-                    messages=[self.system, *self.messages],
+                    messages=[self.system, *self._context()],
                     tools=TOOLS,
                     tool_choice="auto",
                     reasoning_effort=config.EFFORT,
                     temperature=0.3,
-                    max_completion_tokens=4096,
+                    max_completion_tokens=MAX_COMPLETION_TOKENS,
                 )
             except groq.RateLimitError as exc:
                 if attempt == MAX_ATTEMPTS:

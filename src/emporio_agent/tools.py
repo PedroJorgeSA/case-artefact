@@ -44,7 +44,8 @@ TOOLS = [
             "Busca instrumentos no catálogo da loja, com preço, promoção ativa e disponibilidade. "
             "Use sempre que o cliente perguntar sobre produtos, preços, modelos, marcas ou estoque. "
             "Já traz o preço no PIX e o parcelamento máximo sem juros de cada item. "
-            "Por padrão retorna só itens disponíveis para venda."
+            "Retorna até 6 itens (os mais relevantes ou, sem termo, os mais baratos) e o total "
+            "encontrado. Por padrão retorna só itens disponíveis para venda."
         ),
         {
             "termo": {

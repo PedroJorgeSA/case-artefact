@@ -152,7 +152,7 @@ class Store:
         min_price: float | None = None,
         max_price: float | None = None,
         include_unavailable: bool = False,
-        limit: int = 10,
+        limit: int = 6,
     ) -> dict:
         df = self.products
         if not include_unavailable:
