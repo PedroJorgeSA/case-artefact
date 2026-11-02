@@ -32,7 +32,7 @@ Outros comandos:
 
 ```bash
 uv run emporio --debug                     # chat no terminal, mostrando o caminho de cada mensagem no grafo
-uv run pytest                              # 57 testes, sem internet (cliente Groq falso, só BM25)
+uv run pytest                              # 60 testes, sem internet (cliente Groq falso, só BM25)
 uv run python scripts/avaliar.py           # avaliação offline do roteador e da busca no manual
 uv run python scripts/gerar_conversas.py   # roda de novo as 5 conversas de exemplo com o modelo de verdade
 ```
@@ -179,7 +179,7 @@ Na validação cruzada no próprio treino, as palavras-chave ficaram *na frente*
 | Só embeddings | 68% | 82% | 0,75 |
 | **Híbrida (RRF)** | **89%** | **97%** | **0,94** |
 
-**Testes** (`uv run pytest`, 57 testes, ~4 s, sem internet) cobrem:
+**Testes** (`uv run pytest`, 60 testes, ~4 s, sem internet) cobrem:
 - as regras de negócio;
 - todos os caminhos do grafo, com cliente Groq falso: espera por limite, nova tentativa após saída malformada, desfazer turno com erro, preço inventado devolvido e corrigido, cartão que nunca chega ao modelo, contatos mascarados, conversa que sobrevive a um reinício;
 - o acerto da busca;
@@ -255,4 +255,4 @@ As escolhas de arquitetura, as premissas e a revisão final foram minhas. O hist
 | `knowledge/politicas.md` | O manual de políticas transcrito do PDF |
 | `datasets/` | Intenções rotuladas (treino / teste separado) e perguntas de referência da busca |
 | `scripts/` | Gerador de exemplos e avaliação offline |
-| `tests/` | 57 testes offline |
+| `tests/` | 60 testes offline |

@@ -32,7 +32,7 @@ Other commands:
 
 ```bash
 uv run emporio --debug                     # terminal chat, printing the graph path of every message
-uv run pytest                              # 57 tests, offline (fake Groq client, BM25 only)
+uv run pytest                              # 60 tests, offline (fake Groq client, BM25 only)
 uv run python scripts/avaliar.py           # offline evaluation of the router and of the manual search
 uv run python scripts/gerar_conversas.py   # re-runs the 5 example conversations against the real model
 ```
@@ -179,7 +179,7 @@ In cross-validation on the training set the keyword rules scored *higher* (0.77 
 | Embeddings only | 68% | 82% | 0.75 |
 | **Hybrid (RRF)** | **89%** | **97%** | **0.94** |
 
-**Tests** (`uv run pytest`, 57 tests, ~4 s, no network) cover:
+**Tests** (`uv run pytest`, 60 tests, ~4 s, no network) cover:
 - business rules;
 - every graph path, using a fake Groq client: rate-limit wait, malformed-generation retry, turn rollback on error, invented price sent back and corrected, card number never reaching the model, contacts masked in events, conversation surviving a restart;
 - retrieval hit-rate;
@@ -255,4 +255,4 @@ Architecture choices, assumptions and final review were mine. The commit history
 | `knowledge/politicas.md` | The policy manual transcribed from the PDF |
 | `datasets/` | Labeled intents (train / held-out) and retrieval golden questions |
 | `scripts/` | Example generator and offline evaluation |
-| `tests/` | 57 offline tests |
+| `tests/` | 60 offline tests |
