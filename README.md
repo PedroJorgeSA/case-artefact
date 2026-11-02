@@ -210,6 +210,7 @@ Generated against the real model by `scripts/gerar_conversas.py`. Lines starting
 ## Limitations and next steps
 
 - **Slow on the free tier.** An answer that uses tools takes 5 to 60 seconds, because the agent waits for Groq's per-minute token limit. A paid tier would bring this down to a few seconds.
+- **The free tier also caps tokens per day (200k).** A heavy day of testing runs out. The agent waits out the per-minute limit, but fails fast with a clear message when the wait is the daily one (minutes or hours) instead of leaving the customer hanging.
 - **Human handoff writes to a file** (`.handoffs/chamados.jsonl`). The next step is LangGraph's `interrupt()` so an operator can take over the thread, plus a real ticketing integration.
 - **The router learns from 186 sentences.** Production traffic, plus the 👍/👎 feedback already being collected, would be the training set. The same pipeline could flag dissatisfaction to prioritize tickets.
 - **The output check covers values, protocols and citations**, but not claims phrased in words ("the warranty covers drops"). An LLM-as-judge would catch those, at the cost of another call per turn.

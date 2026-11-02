@@ -210,6 +210,7 @@ Gerados com o modelo de verdade por `scripts/gerar_conversas.py`. Linhas com `>`
 ## Limitações e próximos passos
 
 - **Lento no plano grátis.** Uma resposta com consultas leva de 5 a 60 segundos, porque o agente espera o limite de tokens por minuto do Groq. Num plano pago, cai para poucos segundos.
+- **O plano grátis também limita tokens por dia (200 mil).** Um dia inteiro de testes esgota o limite. O agente espera o limite por minuto, mas, quando a espera é a do limite diário (minutos ou horas), falha na hora com uma mensagem clara, em vez de deixar o cliente esperando.
 - **O chamado para a equipe vai para um arquivo** (`.handoffs/chamados.jsonl`). O próximo passo é o `interrupt()` do LangGraph, para um atendente assumir a conversa, e a integração com um sistema de chamados de verdade.
 - **O roteador aprende com 186 frases.** As mensagens reais, junto com as avaliações 👍/👎 que já são coletadas, seriam o conjunto de treino. O mesmo pipeline poderia detectar insatisfação para priorizar chamados.
 - **A checagem cobre valores, protocolos e citações**, mas não afirmações escritas em palavras ("a garantia cobre queda"). Um LLM-juiz pegaria isso, ao custo de mais uma chamada por turno.
