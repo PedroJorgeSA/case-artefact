@@ -737,15 +737,15 @@ async function loadManual() {
     </section>`).join("");
 }
 
-async function openCitation(id) {
+async function openCitation(id, { keep = false } = {}) {
   await loadManual();
   selectTab("manual");
   if (isNarrow()) openInspector(true);
   const target = document.getElementById(`sec-${id}`);
   if (!target) return;
-  target.scrollIntoView({ behavior: reducedMotion() ? "auto" : "smooth", block: "start" });
+  target.scrollIntoView({ behavior: reducedMotion() || keep ? "auto" : "smooth", block: "start" });
   target.classList.add("is-focused");
-  setTimeout(() => target.classList.remove("is-focused"), 2400);
+  if (!keep) setTimeout(() => target.classList.remove("is-focused"), 2400);
 }
 
 async function loadScenarios() {
@@ -876,5 +876,9 @@ $("#close-inspector").addEventListener("click", () => openInspector(false));
   const fromUrl = new URLSearchParams(location.search).get("sessao");
   const saved = fromUrl || storage("get");
   if (saved && !(await restore(saved))) storage("clear");
+  // #manual=4.1 abre o manual numa seção; #cenarios abre a aba de cenários.
+  const [hashTab, hashValue] = location.hash.slice(1).split("=");
+  if (hashTab === "manual") openCitation(hashValue || "1", { keep: true });
+  if (hashTab === "cenarios") selectTab("scenarios");
   if (!isNarrow()) input.focus();
 })();
