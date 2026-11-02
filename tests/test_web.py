@@ -8,21 +8,27 @@ import pytest
 from fastapi.testclient import TestClient
 
 from emporio_agent import config
-from emporio_agent.agent import Reply, ToolCall, Waiting
-from emporio_agent.web import _history_items, create_app
+from emporio_agent.web import create_app
 
 
 class FakeAgent:
-    def __init__(self, session_id=None, events=None):
+    def __init__(self, session_id=None):
         self.session_id = session_id or "abc12345"
-        self.messages = []
-        self.events = events
+        self.log = []
+
+    @property
+    def exists(self):
+        return bool(self.log)
 
     def stream(self, text):
-        self.messages.append({"role": "user", "content": text})
-        yield Waiting(2.0)
-        yield ToolCall("buscar_produtos", {"termo": "violão"}, json.dumps({"total_encontrado": 0, "produtos": []}), False)
-        yield Reply("Não encontrei esse modelo.")
+        events = [
+            {"type": "user", "text": text},
+            {"type": "waiting", "seconds": 2.0},
+            {"type": "tool", "name": "buscar_produtos", "args": {"termo": "violão"}, "result": {"total_encontrado": 0}, "is_error": False},
+            {"type": "reply", "text": "Não encontrei esse modelo.", "citations": [], "options": [], "tools": ["buscar_produtos"]},
+        ]
+        yield from events
+        self.log.append({"events": events})
 
 
 def _events(response) -> list[dict]:
@@ -38,10 +44,10 @@ def test_chat_streams_events_in_order(client):
     response = client.post("/api/chat", json={"message": "tem violão?"})
     assert response.status_code == 200
     events = _events(response)
-    assert [e["type"] for e in events] == ["session", "waiting", "tool", "reply"]
+    assert [e["type"] for e in events] == ["session", "user", "waiting", "tool", "reply"]
     assert events[0]["session_id"] == "abc12345"
-    assert events[2]["result"] == {"total_encontrado": 0, "produtos": []}
-    assert events[3]["text"] == "Não encontrei esse modelo."
+    assert events[3]["result"] == {"total_encontrado": 0}
+    assert events[4]["text"] == "Não encontrei esse modelo."
 
 
 def test_rejects_unsafe_session_id(client):
@@ -61,27 +67,31 @@ def test_api_errors_become_events():
     assert events[-1]["type"] == "error" and "GROQ_API_KEY" in events[-1]["message"]
 
 
-def test_unknown_session_is_404(client, tmp_path, monkeypatch):
-    monkeypatch.setattr(config, "SESSIONS_DIR", tmp_path)
+def test_unknown_session_is_404(client):
     assert client.get("/api/sessions/naoexiste").status_code == 404
 
 
-def test_history_pairs_tool_calls_with_results():
-    messages = [
-        {"role": "user", "content": "pedido 8"},
-        {
-            "role": "assistant",
-            "content": "",
-            "tool_calls": [{"id": "c1", "function": {"name": "consultar_pedido", "arguments": '{"numero_pedido": 8}'}}],
-        },
-        {"role": "tool", "tool_call_id": "c1", "content": '{"erro": "não confere"}'},
-        {"role": "assistant", "content": "Não consegui confirmar."},
-    ]
-    items = _history_items(messages)
-    assert [i["type"] for i in items] == ["user", "tool", "reply"]
-    assert items[1]["is_error"] and items[1]["args"] == {"numero_pedido": 8}
+def test_history_replays_the_saved_events(client):
+    client.post("/api/chat", json={"message": "tem violão?", "session_id": "s1"})
+    turns = client.get("/api/sessions/s1").json()["turns"]
+    assert len(turns) == 1 and turns[0][0] == {"type": "user", "text": "tem violão?"}
 
 
-def test_info_reports_store_clock(client):
+def test_feedback_is_recorded(client, tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "FEEDBACK_DIR", tmp_path)
+    response = client.post("/api/feedback", json={"session_id": "s1", "turn": 0, "rating": "down", "reason": "preço errado"})
+    assert response.json() == {"ok": True}
+    assert "preço errado" in (tmp_path / "avaliacoes.jsonl").read_text(encoding="utf-8")
+
+
+def test_scenarios_are_listed_and_checked(client):
+    scenarios = client.get("/api/scenarios").json()
+    assert len(scenarios) == 5 and scenarios[0]["mensagens"]
+    replies = [{"text": "ok", "tools": ["buscar_produtos"], "citations": []}]
+    checks = client.post("/api/scenarios/01/check", json={"replies": replies}).json()["checks"]
+    assert checks == [{"item": "chamou buscar_produtos", "ok": True}]
+
+
+def test_info_reports_store_clock_and_pipeline(client):
     info = client.get("/api/info").json()
-    assert {"modelo", "agora", "loja_aberta", "status"} <= info.keys()
+    assert {"modelo", "agora", "loja_aberta", "status", "busca", "roteador"} <= info.keys()

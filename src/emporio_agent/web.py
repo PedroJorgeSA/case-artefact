@@ -1,15 +1,20 @@
 """Interface web: API com eventos em tempo real (SSE) e a página do chat.
 
-Cada mensagem é respondida como um stream de eventos (`text/event-stream`):
-sessão, ferramentas chamadas, esperas pelo limite do Groq e a resposta final.
-Assim a página mostra o que a Lia está fazendo enquanto ela trabalha.
+Cada mensagem é respondida como um stream de eventos (`text/event-stream`), os
+mesmos que o grafo emite: nó iniciado/terminado, intenção, trechos do manual,
+chamadas ao modelo (tokens e tempo), ferramentas, esperas pelo limite do Groq,
+verificação e a resposta final. Assim a página mostra o que a Lia está fazendo
+enquanto ela trabalha. Os eventos de cada turno ficam salvos no checkpoint, e a
+página redesenha a conversa inteira ao recarregar.
 """
 
 import json
 import os
 import threading
 from collections.abc import Callable
+from datetime import datetime
 from pathlib import Path
+from typing import Literal
 
 import groq
 from fastapi import FastAPI, HTTPException
@@ -18,56 +23,31 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from . import config
-from .agent import SESSION_ID_PATTERN, Agent, Reply, ToolCall, Waiting
+from .agent import SESSION_ID_PATTERN, Agent
 from .data import store_status
+from .intent import load_classifier
 from .prompts import WEEKDAYS_PT
+from .rag import load_index
+from .scenarios import SCENARIOS, evaluate
 
 STATIC_DIR = Path(__file__).parent / "static"
+SESSION_ID = f"^{SESSION_ID_PATTERN.pattern}$"
 
 
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=2000)
-    session_id: str | None = Field(default=None, pattern=f"^{SESSION_ID_PATTERN.pattern}$")
+    session_id: str | None = Field(default=None, pattern=SESSION_ID)
+
+
+class FeedbackRequest(BaseModel):
+    session_id: str = Field(pattern=SESSION_ID)
+    turn: int = Field(ge=0)
+    rating: Literal["up", "down"]
+    reason: str | None = Field(default=None, max_length=200)
 
 
 def _sse(payload: dict) -> str:
     return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
-
-
-def _tool_payload(name: str, args: dict, result: str) -> dict:
-    parsed = json.loads(result)
-    return {"type": "tool", "name": name, "args": args, "result": parsed, "is_error": "erro" in parsed}
-
-
-def _event_payload(event) -> dict:
-    if isinstance(event, ToolCall):
-        return _tool_payload(event.name, event.args, event.result)
-    if isinstance(event, Waiting):
-        return {"type": "waiting", "seconds": event.seconds}
-    if isinstance(event, Reply):
-        return {"type": "reply", "text": event.text}
-    raise TypeError(f"Evento desconhecido: {event!r}")
-
-
-def _history_items(messages: list[dict]) -> list[dict]:
-    """Converte o histórico salvo na mesma forma dos eventos, para a página redesenhar a conversa."""
-    items, pending = [], {}
-    for message in messages:
-        if message["role"] == "user":
-            items.append({"type": "user", "text": message["content"]})
-        elif message["role"] == "assistant" and message.get("tool_calls"):
-            for call in message["tool_calls"]:
-                pending[call["id"]] = call["function"]
-        elif message["role"] == "assistant":
-            items.append({"type": "reply", "text": message["content"]})
-        elif message["role"] == "tool" and message["tool_call_id"] in pending:
-            function = pending.pop(message["tool_call_id"])
-            try:
-                args = json.loads(function["arguments"] or "{}")
-            except json.JSONDecodeError:
-                args = {}
-            items.append(_tool_payload(function["name"], args, message["content"]))
-    return items
 
 
 def _error_message(exc: Exception) -> str:
@@ -108,13 +88,37 @@ def create_app(agent_factory: Callable[..., Agent] = Agent) -> FastAPI:
             "agora": f"{WEEKDAYS_PT[now.weekday()][:3]}, {now:%d/%m/%Y %H:%M}",
             "loja_aberta": status["aberta_agora"],
             "status": f"Aberta até {status['fecha_as']}" if status["aberta_agora"] else f"Fechada, reabre {status.get('reabre', 'no próximo dia útil')}",
+            "busca": load_index().mode,
+            "roteador": "ml" if load_classifier() else "palavras-chave",
         }
+
+    @app.get("/api/scenarios")
+    def scenarios():
+        return [{k: s[k] for k in ("id", "titulo", "mostra", "mensagens")} for s in SCENARIOS]
+
+    @app.post("/api/scenarios/{scenario_id}/check")
+    def check_scenario(scenario_id: str, body: dict):
+        scenario = next((s for s in SCENARIOS if s["id"] == scenario_id), None)
+        if scenario is None:
+            raise HTTPException(404, "Cenário não encontrado.")
+        return {"checks": evaluate(scenario, body.get("replies", []))}
 
     @app.get("/api/sessions/{session_id}")
     def history(session_id: str):
-        if not SESSION_ID_PATTERN.fullmatch(session_id) or not (config.SESSIONS_DIR / f"{session_id}.json").exists():
+        if not SESSION_ID_PATTERN.fullmatch(session_id):
             raise HTTPException(404, "Conversa não encontrada.")
-        return {"session_id": session_id, "items": _history_items(get_agent(session_id).messages)}
+        agent = get_agent(session_id)
+        if not agent.exists:
+            raise HTTPException(404, "Conversa não encontrada.")
+        return {"session_id": session_id, "turns": [turn["events"] for turn in agent.log]}
+
+    @app.post("/api/feedback")
+    def feedback(request: FeedbackRequest):
+        config.FEEDBACK_DIR.mkdir(exist_ok=True)
+        record = {**request.model_dump(), "em": datetime.now(config.STORE_TZ).isoformat(timespec="seconds")}
+        with open(config.FEEDBACK_DIR / "avaliacoes.jsonl", "a", encoding="utf-8") as f:
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+        return {"ok": True}
 
     @app.post("/api/chat")
     def chat(request: ChatRequest):
@@ -127,7 +131,7 @@ def create_app(agent_factory: Callable[..., Agent] = Agent) -> FastAPI:
             try:
                 yield _sse({"type": "session", "session_id": agent.session_id})
                 for event in agent.stream(request.message):
-                    yield _sse(_event_payload(event))
+                    yield _sse(event)
             except Exception as exc:  # noqa: BLE001 — o erro vira um evento para a página
                 yield _sse({"type": "error", "message": _error_message(exc)})
                 if not isinstance(exc, groq.APIError):
@@ -152,6 +156,9 @@ def main() -> None:
     import uvicorn
 
     port = int(os.getenv("PORT", "8000"))
+    print("Carregando o índice do manual e o classificador de intenção…")
+    load_index()
+    load_classifier()
     print(f"Empório da Música: abra http://127.0.0.1:{port}")
     uvicorn.run(create_app(), host="127.0.0.1", port=port, log_level="warning")
 
