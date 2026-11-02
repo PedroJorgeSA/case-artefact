@@ -217,3 +217,15 @@ def test_daily_limit_fails_fast_instead_of_waiting_minutes():
     with pytest.raises(groq.RateLimitError):
         list(agent.stream("oi"))
     assert len(client.requests) == 1 and agent.messages == []
+
+
+def test_claiming_what_the_store_sells_requires_the_catalog():
+    agent, client = make_agent(
+        _message("Sim, temos flautas transversais!"),
+        _message(tool_calls=[_tool_call("c1", "listar_categorias", {})]),
+        _message("No momento não há instrumentos de sopro à venda."),
+    )
+    events = list(agent.stream("Vocês vendem flauta transversal?"))
+    assert [e["status"] for e in events if e["type"] == "check"] == ["refazer", "corrigida"]
+    assert "catálogo" in client.requests[1]["messages"][-1]["content"]
+    assert agent.messages[-1]["content"].startswith("No momento")

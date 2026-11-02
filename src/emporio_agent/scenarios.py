@@ -3,6 +3,7 @@
 Cada cenário tem o resultado esperado em forma verificável (`espera`), para a
 interface mostrar se a conversa passou ou não depois de rodar:
 - ferramentas: ferramentas que precisam ter sido chamadas em algum turno;
+- alguma_ferramenta: pelo menos uma destas precisa ter sido chamada;
 - secoes: seções do manual que precisam ter sido citadas em alguma resposta;
 - contem: textos que precisam aparecer em alguma resposta (ex.: um produto em promoção);
 - nao_contem: textos que não podem aparecer em nenhuma resposta (ex.: dados do pedido).
@@ -66,7 +67,7 @@ SCENARIOS = [
             "Qual o endereço da loja? Vocês abrem no domingo?",
             "Vocês vendem flauta transversal? E cordas de violão?",
         ],
-        "espera": {"secoes": ["4.1"]},
+        "espera": {"secoes": ["4.1"], "alguma_ferramenta": ["buscar_produtos", "listar_categorias"]},
     },
 ]
 
@@ -78,6 +79,9 @@ def evaluate(scenario: dict, replies: list[dict]) -> list[dict]:
     cited = {c["id"] for r in replies for c in r.get("citations", [])}
     text = " ".join(r["text"] for r in replies)
     checks = [{"item": f"chamou {t}", "ok": t in tools} for t in expected.get("ferramentas", [])]
+    if expected.get("alguma_ferramenta"):
+        options = expected["alguma_ferramenta"]
+        checks.append({"item": f"consultou {' ou '.join(options)}", "ok": bool(tools & set(options))})
     checks += [{"item": f"citou §{s}", "ok": s in cited} for s in expected.get("secoes", [])]
     checks += [{"item": f"mencionou “{s}”", "ok": s in text} for s in expected.get("contem", [])]
     checks += [{"item": f"não mostrou “{s}”", "ok": s not in text} for s in expected.get("nao_contem", [])]

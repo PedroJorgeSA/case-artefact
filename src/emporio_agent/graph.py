@@ -59,6 +59,8 @@ RETRYABLE_400 = ("tool_use_failed", "output_parse_failed")
 ESCALATION_TEXT = (
     "Essa ficou mais complicada do que eu esperava. Posso abrir um chamado para alguém da equipe te responder?"
 )
+CATALOG_TOOLS = {"buscar_produtos", "detalhes_produto", "listar_categorias"}
+_AVAILABILITY_RE = re.compile(r"\b(temos|tem sim|vendemos|trabalhamos com|disponive(l|is)|em estoque|a venda)\b")
 _OPTIONS_RE = re.compile(r"\n?\s*\[\[\s*op[cç][oõ]es\s*:(.*?)\]\]\s*$", re.I | re.S)
 
 
@@ -326,6 +328,17 @@ def build_graph(client, executor: ToolExecutor, index: PolicyIndex, now_fn: Call
         except Exception as exc:  # noqa: BLE001 — a checagem é rede de segurança; não derruba o atendimento
             writer({"type": "check", "status": "alerta", "issues": [f"A checagem falhou: {type(exc).__name__}."]})
             return {"turn": {**turn, "check": {"status": "alerta", "issues": ["checagem indisponível"]}}}
+        # Dizer o que a loja tem (ou não tem) exige o catálogo no mesmo turno: o manual
+        # lista categorias que hoje estão vazias, como instrumentos de sopro.
+        if (
+            "produto" in turn.get("intents", [])
+            and not CATALOG_TOOLS & set(turn["tool_calls"])
+            and _AVAILABILITY_RE.search(normalize(draft))
+        ):
+            check.issues.append(
+                "A resposta afirma o que a loja tem ou não tem sem consultar o catálogo neste turno. "
+                "Use buscar_produtos ou listar_categorias antes."
+            )
         revisions = turn.get("revisions", 0)
         if check.ok:
             status = "corrigida" if revisions else "aprovada"
