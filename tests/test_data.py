@@ -96,3 +96,11 @@ def test_return_window(store):
 def test_executor_reports_unknown_tool():
     output, is_error = ToolExecutor().run("apagar_tudo", {})
     assert is_error and "desconhecida" in json.loads(output)["erro"]
+
+
+def test_search_only_promotions(store):
+    result = store.search_products(category="Violões", only_promotions=True)
+    names = [p["nome"] for p in result["produtos"]]
+    assert result["total_encontrado"] == 2
+    assert all(p["promocao"] for p in result["produtos"])
+    assert any("Crafter" in n for n in names) and any("Taylor" in n for n in names)

@@ -62,6 +62,10 @@ TOOLS = [
                 "type": "boolean",
                 "description": "true para incluir itens sem estoque, descontinuados ou em lançamento.",
             },
+            "apenas_em_promocao": {
+                "type": "boolean",
+                "description": "true para trazer só itens com promoção ativa (ex.: 'tem algum violão em promoção?').",
+            },
         },
     ),
     _tool(
@@ -140,8 +144,12 @@ class ToolExecutor:
             return json.dumps({"erro": f"{type(exc).__name__}: {exc}"}), True
         return json.dumps(result, ensure_ascii=False, default=str), "erro" in result
 
-    def _buscar_produtos(self, termo=None, categoria=None, preco_min=None, preco_max=None, incluir_indisponiveis=False):
-        return self.store.search_products(termo, categoria, preco_min, preco_max, incluir_indisponiveis)
+    def _buscar_produtos(
+        self, termo=None, categoria=None, preco_min=None, preco_max=None, incluir_indisponiveis=False, apenas_em_promocao=False
+    ):
+        return self.store.search_products(
+            termo, categoria, preco_min, preco_max, incluir_indisponiveis, only_promotions=bool(apenas_em_promocao)
+        )
 
     def _detalhes_produto(self, produto_id):
         return self.store.get_product(produto_id) or {"erro": f"Produto {produto_id} não encontrado."}

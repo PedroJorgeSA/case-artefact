@@ -152,6 +152,7 @@ class Store:
         min_price: float | None = None,
         max_price: float | None = None,
         include_unavailable: bool = False,
+        only_promotions: bool = False,
         limit: int = 6,
     ) -> dict:
         df = self.products
@@ -159,6 +160,9 @@ class Store:
             df = df[(df["status"] == "active") & (df["stock_quantity"] > 0)]
         if category:
             df = df[df["category"].map(normalize).str.contains(normalize(category), regex=False)]
+
+        if only_promotions:
+            df = df[df["product_id"].isin(self.active_promotions["product_id"])]
 
         df = df.copy()
         df["_price"] = [self._promo_price(r)[0] for r in df.itertuples()]

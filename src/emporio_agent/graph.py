@@ -296,7 +296,8 @@ def build_graph(client, executor: ToolExecutor, index: PolicyIndex, now_fn: Call
                     output, is_error = result.as_context(), False
                 else:
                     output, is_error = executor.run(name, args)
-            sources.append(output)
+            # Os argumentos também valem como fonte: um filtro "até R$ 1.000" veio do cliente.
+            sources += [output, json.dumps(args, ensure_ascii=False)]
             out.append({"role": "tool", "tool_call_id": call["id"], "content": output})
             if name != "consultar_manual":
                 try:

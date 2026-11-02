@@ -4,6 +4,7 @@ Cada cenário tem o resultado esperado em forma verificável (`espera`), para a
 interface mostrar se a conversa passou ou não depois de rodar:
 - ferramentas: ferramentas que precisam ter sido chamadas em algum turno;
 - secoes: seções do manual que precisam ter sido citadas em alguma resposta;
+- contem: textos que precisam aparecer em alguma resposta (ex.: um produto em promoção);
 - nao_contem: textos que não podem aparecer em nenhuma resposta (ex.: dados do pedido).
 """
 
@@ -28,7 +29,7 @@ SCENARIOS = [
             "Vi no Instagram que o Takamine GD20 tá em promoção, é verdade?",
             "Poxa. E tem algum violão em promoção de verdade?",
         ],
-        "espera": {"ferramentas": ["buscar_produtos"]},
+        "espera": {"ferramentas": ["buscar_produtos"], "contem": ["Crafter"]},
     },
     {
         "id": "03",
@@ -78,5 +79,6 @@ def evaluate(scenario: dict, replies: list[dict]) -> list[dict]:
     text = " ".join(r["text"] for r in replies)
     checks = [{"item": f"chamou {t}", "ok": t in tools} for t in expected.get("ferramentas", [])]
     checks += [{"item": f"citou §{s}", "ok": s in cited} for s in expected.get("secoes", [])]
+    checks += [{"item": f"mencionou “{s}”", "ok": s in text} for s in expected.get("contem", [])]
     checks += [{"item": f"não mostrou “{s}”", "ok": s not in text} for s in expected.get("nao_contem", [])]
     return checks

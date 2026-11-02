@@ -201,3 +201,12 @@ def test_conversation_survives_a_new_agent_with_the_same_checkpointer():
     second, _ = make_agent(checkpointer=saver, session_id="sessao-1")
     assert [m["content"] for m in second.messages] == ["oi", "Oi!"]
     assert second.exists
+
+
+def test_values_the_customer_gave_as_filters_are_not_flagged():
+    agent, _ = make_agent(
+        _message(tool_calls=[_tool_call("c1", "buscar_produtos", {"categoria": "Violões", "preco_max": 1000})]),
+        _message("Separei opções até R$ 1.000."),
+    )
+    events = list(agent.stream("violão até uns mil reais"))
+    assert [e["status"] for e in events if e["type"] == "check"] == ["aprovada"]
