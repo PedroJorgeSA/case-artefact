@@ -15,3 +15,6 @@ __pycache__/
 desafio_tecnico_ai_eng_artefact.pdf
 
 .DS_Store
+
+# Configuração local do editor/assistente
+.claude/
