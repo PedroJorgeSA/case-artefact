@@ -189,15 +189,15 @@ Na validação cruzada no próprio treino, as palavras-chave ficaram *na frente*
 
 ## Exemplos de conversa
 
-Gerados com o modelo de verdade por `scripts/gerar_conversas.py`. Linhas com `>` mostram o caminho no grafo. Cada arquivo termina com o resultado esperado do cenário em forma de checklist. Cada um também abre na interface em `/?sessao=exemplo-NN`.
+Gerados com o modelo de verdade por `scripts/gerar_conversas.py`. A 01, a 03 e a 04 vêm do grafo atual, e as linhas com `>` mostram o caminho nele. A 02 e a 05 vêm da primeira versão do agente (veja a nota em cada arquivo). Cada arquivo termina com o resultado esperado do cenário em forma de checklist. Cada um também abre na interface em `/?sessao=exemplo-NN`.
 
 | Exemplo | O que mostra |
 |---|---|
 | [01 · Busca e pagamento](conversas/01-busca-e-pagamento.md) | Busca por faixa de preço, PIX e parcelas calculados em código, opções de resposta rápida |
-| [02 · Promoção que não existe](conversas/02-promocao-inexistente.md) | Transparência quando o cliente cita uma promoção inativa |
+| [02 · Promoção que não existe](conversas/02-promocao-inexistente.md) | Transparência quando o cliente cita uma promoção inativa. **Erro conhecido, mantido de propósito:** a segunda resposta diz que nenhum violão está em promoção, mas dois estão. Foi gerada pela primeira versão, a correção está no código, e a cota diária do Groq acabou antes de gerar de novo (nota no arquivo) |
 | [03 · Pedido, troca e garantia](conversas/03-pedido-troca-e-garantia.md) | **Não trivial:** verificação de identidade, prazos calculados em código, seções do manual recuperadas e citadas, chamado para a equipe |
 | [04 · Segurança e LGPD](conversas/04-seguranca-e-lgpd.md) | Contato errado não revela nada, cartão removido antes do modelo, tentativa de manipulação |
-| [05 · Manual, endereço e horário](conversas/05-manual-endereco-e-horario.md) | Perguntas sugeridas no enunciado respondidas pelo manual com citação; categoria vazia e acessórios |
+| [05 · Categoria vazia e horário](conversas/05-fora-do-catalogo-e-horario.md) | Categoria sem produtos (sem inventar modelos), acessórios fora do escopo, horário. Gerada pela primeira versão do agente |
 
 ## O que eu assumi sobre os dados
 

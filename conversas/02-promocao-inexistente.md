@@ -4,6 +4,8 @@
 
 Modelo `openai/gpt-oss-120b` · data simulada quarta-feira, 25/03/2026 10:00 · gerado por `scripts/gerar_conversas.py` · na interface: `/?sessao=exemplo-02`
 
+> **Nota (erro conhecido, já corrigido no código):** esta conversa foi gerada pela primeira versão do agente. Na segunda resposta a Lia diz que nenhum violão está em promoção, mas o Crafter HT-100 (−18%) e o Taylor 110e (−8%) estão. A busca não tinha filtro de promoção e o modelo concluiu a partir dos seis itens mais baratos. A correção (filtro `apenas_em_promocao` na busca e regra no prompt contra concluir "não há" a partir de uma amostra) está no commit "Busca só itens em promoção e checagem aceita valores dados pelo cliente". Não foi possível gerar a conversa de novo antes da entrega por causa do limite diário de tokens do plano gratuito do Groq.
+
 ---
 
 **Cliente:** Vi no Instagram que o Takamine GD20 tá em promoção, é verdade?
