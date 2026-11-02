@@ -9,6 +9,7 @@ pelo Groq, resposta final), o que permite à interface web mostrar o progresso.
 """
 
 import json
+import re
 import time
 import uuid
 from collections.abc import Iterator
@@ -21,6 +22,8 @@ from .prompts import build_system
 from .tools import TOOLS, ToolExecutor
 
 MAX_ATTEMPTS = 6
+# O ID vira nome de arquivo em .sessions/, então só aceita caracteres seguros.
+SESSION_ID_PATTERN = re.compile(r"[A-Za-z0-9_-]{1,64}")
 ESCALATION_TEXT = (
     "Essa ficou mais complicada do que eu esperava. Vou pedir para alguém da equipe te responder, tudo bem?"
 )
@@ -63,6 +66,8 @@ class Agent:
         # Sem retentativas no SDK: as esperas por limite de taxa são feitas aqui,
         # para poderem ser avisadas ao usuário.
         self.client = client or groq.Groq(api_key=config.API_KEY, max_retries=0)
+        if session_id is not None and not SESSION_ID_PATTERN.fullmatch(session_id):
+            raise ValueError(f"ID de sessão inválido: {session_id!r}")
         self.executor = ToolExecutor()
         self.session_id = session_id or uuid.uuid4().hex[:8]
         self.messages: list[dict] = []
