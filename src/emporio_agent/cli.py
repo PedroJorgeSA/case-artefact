@@ -5,7 +5,7 @@ import json
 
 import groq
 
-from .agent import Agent
+from .agent import Agent, Reply, ToolCall, Waiting
 
 GREETING = "Lia: Oi! Eu sou a Lia, da Empório da Música 🎸 Como posso te ajudar hoje?"
 
@@ -32,12 +32,20 @@ def main() -> None:
             break
 
         try:
-            reply = agent.send(user_text)
+            reply = None
+            for event in agent.stream(user_text):
+                if isinstance(event, Waiting):
+                    print(f"  … aguardando o limite do Groq ({event.seconds:.0f}s)")
+                elif isinstance(event, ToolCall) and args.debug:
+                    status = "ERRO" if event.is_error else "ok"
+                    print(f"  ⚙ {event.name}({json.dumps(event.args, ensure_ascii=False)}) -> {status}")
+                elif isinstance(event, Reply):
+                    reply = event
         except groq.AuthenticationError:
             print("\n[erro] Credencial inválida. Confira GROQ_API_KEY no arquivo .env.")
             break
         except groq.RateLimitError:
-            print("\n[erro] Limite de requisições atingido. Tente de novo em instantes.")
+            print("\n[erro] Limite do Groq atingido mesmo após esperar. Tente de novo em um minuto.")
             continue
         except groq.APIStatusError as e:
             print(f"\n[erro] API retornou {e.status_code}: {e.message}")
@@ -46,10 +54,6 @@ def main() -> None:
             print("\n[erro] Sem conexão com a API.")
             continue
 
-        if args.debug:
-            for call in reply.tool_calls:
-                status = "ERRO" if call.is_error else "ok"
-                print(f"  ⚙ {call.name}({json.dumps(call.args, ensure_ascii=False)}) -> {status}")
         print(f"\nLia: {reply.text}")
 
     print(f"\n[conversa salva; para continuar: uv run emporio --session {agent.session_id}]")
