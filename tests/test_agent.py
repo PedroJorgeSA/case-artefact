@@ -100,3 +100,10 @@ def test_old_tool_results_are_shortened_only_in_context():
     assert len(context[2]["content"]) < 600  # turno anterior: encurtado
     assert context[5]["content"] == long_result  # turno atual: completo
     assert agent.messages[2]["content"] == long_result  # histórico salvo intacto
+
+
+def test_malformed_generation_is_retried():
+    response = httpx.Response(400, request=httpx.Request("POST", "https://groq.test"))
+    error = groq.BadRequestError("Error code: 400 - output_parse_failed", response=response, body=None)
+    agent = Agent(client=FakeClient(error, _message("Oi!")))
+    assert agent.send("oi").text == "Oi!"

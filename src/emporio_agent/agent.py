@@ -26,6 +26,8 @@ MAX_ATTEMPTS = 6
 # resposta reservada; por isso a reserva é curta e resultados antigos encolhem.
 MAX_COMPLETION_TOKENS = 1536
 OLD_TOOL_RESULT_CHARS = 400
+# Erros 400 do Groq em que o gpt-oss gerou uma saída malformada; repetir resolve.
+RETRYABLE_400 = ("tool_use_failed", "output_parse_failed")
 # O ID vira nome de arquivo em .sessions/, então só aceita caracteres seguros.
 SESSION_ID_PATTERN = re.compile(r"[A-Za-z0-9_-]{1,64}")
 ESCALATION_TEXT = (
@@ -135,9 +137,7 @@ class Agent:
                     raise
                 wait = 2.0 * attempt
             except groq.BadRequestError as exc:
-                # O gpt-oss às vezes gera uma chamada de ferramenta malformada
-                # (erro tool_use_failed); repetir a chamada costuma resolver.
-                if "tool_use_failed" not in str(exc) or attempt == MAX_ATTEMPTS:
+                if not any(code in str(exc) for code in RETRYABLE_400) or attempt == MAX_ATTEMPTS:
                     raise
                 wait = 0.0
             if wait:
