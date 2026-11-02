@@ -47,6 +47,7 @@ from .rag import PolicyIndex, tokenize
 from .tools import TOOLS, ToolExecutor
 
 MAX_ATTEMPTS = 6
+MAX_WAIT_SECONDS = 60
 # O plano gratuito do Groq limita cada chamada a 8 mil tokens, contando a resposta reservada.
 MAX_COMPLETION_TOKENS = 1536
 PROMPT_TOKEN_BUDGET = 5800
@@ -72,7 +73,7 @@ def _retry_after(exc: groq.APIStatusError) -> float:
         seconds = float(exc.response.headers.get("retry-after", 10))
     except (TypeError, ValueError):
         seconds = 10.0
-    return min(max(seconds, 1.0), 60.0)
+    return max(seconds, 1.0)
 
 
 def _estimate_tokens(messages: list[dict]) -> int:
@@ -209,6 +210,9 @@ def build_graph(client, executor: ToolExecutor, index: PolicyIndex, now_fn: Call
                 if attempt == MAX_ATTEMPTS:
                     raise
                 wait = _retry_after(exc)
+                # Limite por minuto: vale esperar. Limite diário (minutos ou horas): melhor avisar já.
+                if wait > MAX_WAIT_SECONDS:
+                    raise
             except (groq.InternalServerError, groq.APIConnectionError):
                 if attempt == MAX_ATTEMPTS:
                     raise

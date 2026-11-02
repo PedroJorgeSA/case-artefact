@@ -54,6 +54,8 @@ def _error_message(exc: Exception) -> str:
     if isinstance(exc, groq.AuthenticationError):
         return "A chave do Groq foi recusada. Confira GROQ_API_KEY no arquivo .env."
     if isinstance(exc, groq.RateLimitError):
+        if "per day" in str(exc) or "TPD" in str(exc):
+            return "O limite diário gratuito do Groq acabou. Ele vai liberando aos poucos; tente de novo mais tarde."
         return "O limite gratuito do Groq continua esgotado. Tente de novo em um minuto."
     if isinstance(exc, groq.APIConnectionError):
         return "Sem conexão com a API do Groq."

@@ -23,8 +23,8 @@ def _tool_call(call_id, name, args):
     return SimpleNamespace(id=call_id, function=SimpleNamespace(name=name, arguments=json.dumps(args)))
 
 
-def _rate_limit():
-    response = httpx.Response(429, headers={"retry-after": "3"}, request=httpx.Request("POST", "https://groq.test"))
+def _rate_limit(seconds="3"):
+    response = httpx.Response(429, headers={"retry-after": seconds}, request=httpx.Request("POST", "https://groq.test"))
     return groq.RateLimitError("rate limit", response=response, body=None)
 
 
@@ -210,3 +210,10 @@ def test_values_the_customer_gave_as_filters_are_not_flagged():
     )
     events = list(agent.stream("violão até uns mil reais"))
     assert [e["status"] for e in events if e["type"] == "check"] == ["aprovada"]
+
+
+def test_daily_limit_fails_fast_instead_of_waiting_minutes():
+    agent, client = make_agent(_rate_limit("375"), _message("não deveria chegar aqui"))
+    with pytest.raises(groq.RateLimitError):
+        list(agent.stream("oi"))
+    assert len(client.requests) == 1 and agent.messages == []
