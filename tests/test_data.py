@@ -90,6 +90,7 @@ def test_return_window(store):
     assert within["arrependimento_7_dias_ok"]
     late = store.get_order(7, "leticia.rocha@jmail.com", date(2026, 3, 25))["prazos_pos_venda"]
     assert not late["arrependimento_7_dias_ok"] and late["garantia_legal_90_dias_ok"]
+    assert late["dias_desde_recebimento"] == 36  # previsão de entrega 17/02 -> 25/03
 
 
 def test_executor_reports_unknown_tool():

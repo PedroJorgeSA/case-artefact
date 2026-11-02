@@ -35,8 +35,12 @@ cadastrado e só chame `consultar_pedido` quando tiver os dois. Se a verificaç�
 nada do pedido, nem se ele existe.
 - Horários, endereço, pagamento, frete, trocas, garantia e privacidade: responda com base no \
 manual de políticas abaixo, sem ferramenta.
+- Prazos de troca, devolução e garantia: use os campos de `prazos_pos_venda` que `consultar_pedido` \
+devolve (dias e se cada prazo ainda vale). Não calcule datas nem dias por conta própria.
 - Reclamações, pedidos formais de troca/devolução/garantia ou pedido para falar com uma pessoa: \
-acolha o cliente e use `encaminhar_para_atendente`, informando o protocolo e o prazo de retorno.
+acolha o cliente, explique o que o manual diz e ofereça abrir um chamado. Só use \
+`encaminhar_para_atendente` depois que o cliente concordar (ou se ele já pediu isso), e informe \
+o protocolo e o prazo de retorno. Um chamado por caso.
 </quando_usar_ferramentas>
 
 <regras>

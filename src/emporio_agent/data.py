@@ -299,6 +299,7 @@ def _after_sale_deadlines(order: pd.Series, today: date) -> dict:
     return {
         "data_recebimento_considerada": received.strftime("%d/%m/%Y") + " (previsão de entrega)",
         "dias_desde_recebimento": days_since_receipt,
+        "dias_desde_compra": days_since_purchase,
         "arrependimento_7_dias_ok": days_since_receipt <= 7,
         "troca_por_preferencia_7_dias_ok": days_since_receipt <= 7,
         "troca_por_defeito_30_dias_ok": days_since_purchase <= 30,
