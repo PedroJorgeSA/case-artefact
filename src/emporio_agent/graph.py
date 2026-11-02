@@ -316,7 +316,11 @@ def build_graph(client, executor: ToolExecutor, index: PolicyIndex, now_fn: Call
         draft = turn["draft"]
         conversation = " ".join(m["content"] for m in state["messages"] if m["role"] in ("user", "assistant"))
         sources = [*turn["sources"], build_system(now_fn(), index), conversation]
-        check = check_reply(draft, sources, set(turn.get("retrieved", [])) | {"1.1", "2"}, valid_ids)
+        try:
+            check = check_reply(draft, sources, set(turn.get("retrieved", [])) | {"1.1", "2"}, valid_ids)
+        except Exception as exc:  # noqa: BLE001 — a checagem é rede de segurança; não derruba o atendimento
+            writer({"type": "check", "status": "alerta", "issues": [f"A checagem falhou: {type(exc).__name__}."]})
+            return {"turn": {**turn, "check": {"status": "alerta", "issues": ["checagem indisponível"]}}}
         revisions = turn.get("revisions", 0)
         if check.ok:
             status = "corrigida" if revisions else "aprovada"

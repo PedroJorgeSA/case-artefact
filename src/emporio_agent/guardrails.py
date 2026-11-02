@@ -111,7 +111,7 @@ def mask_value(value):
 
 
 def _cents(raw: str) -> int:
-    raw = raw.replace(" ", "").replace(".", "")
+    raw = re.sub(r"[\s.]", "", raw)  # o modelo às vezes separa milhar com espaço fino (U+202F)
     reais, _, cents = raw.partition(",")
     return int(reais) * 100 + int((cents or "0").ljust(2, "0")[:2])
 

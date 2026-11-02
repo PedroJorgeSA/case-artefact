@@ -29,6 +29,7 @@ def test_masks_email_and_phone():
 def test_money_values_from_json_and_text():
     assert money_values('{"preco": 599.9, "pix": "R$ 569,90"}') == {59990, 56990}
     assert money_values("Sábado 09:00 às 13:00, frete R$ 35,00") == {3500}
+    assert money_values("até R$ 1\u202f000,00 ou R$ 2.000") == {100000, 200000}
 
 
 def test_reply_check_flags_unsupported_values_and_citations():
