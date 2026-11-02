@@ -12,6 +12,9 @@ DATA_DIR = ROOT_DIR / "data"
 KNOWLEDGE_DIR = ROOT_DIR / "knowledge"
 SESSIONS_DIR = ROOT_DIR / ".sessions"
 HANDOFFS_DIR = ROOT_DIR / ".handoffs"
+FEEDBACK_DIR = ROOT_DIR / ".feedback"
+# Modelo de embeddings e vetores do manual (baixados/calculados na primeira execução).
+CACHE_DIR = ROOT_DIR / ".cache"
 
 load_dotenv(ROOT_DIR / ".env")
 

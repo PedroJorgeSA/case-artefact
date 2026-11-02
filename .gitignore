@@ -18,3 +18,7 @@ desafio_tecnico_ai_eng_artefact.pdf
 
 # Configuração local do editor/assistente
 .claude/
+
+# Modelo de embeddings, vetores e avaliações dos clientes
+.cache/
+.feedback/
