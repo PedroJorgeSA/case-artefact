@@ -236,22 +236,27 @@ class Store:
 
     # ---------- pedidos ----------
 
-    def get_order(self, order_id: int, contact: str, today: date) -> dict:
-        """Pedido + itens, liberado só se o e-mail ou telefone bater com o do cliente (LGPD)."""
+    def get_order(self, order_id: int, contact: str | None, today: date) -> dict:
+        """Pedido + itens, liberado só se o e-mail ou telefone bater com o do cliente (LGPD).
+
+        Pedido inexistente e contato errado dão a mesma resposta, para não revelar
+        quais números de pedido existem.
+        """
+        denied = {
+            "erro": "Não foi possível confirmar o pedido com esses dados (número ou contato não conferem). "
+            "Não revele nenhuma informação do pedido."
+        }
         match = self.orders[self.orders["order_id"] == order_id]
-        if match.empty:
-            return {"erro": f"Pedido {order_id} não encontrado."}
+        contact = (contact or "").strip()
+        if match.empty or not contact:
+            return denied
         order = match.iloc[0]
         customer = self.customers[self.customers["customer_id"] == order["customer_id"]].iloc[0]
 
-        contact = contact.strip()
         email_ok = contact.lower() == str(customer["email"]).lower()
         phone_ok = len(digits(contact)) >= 8 and digits(customer["phone"]).endswith(digits(contact)[-8:])
         if not (email_ok or phone_ok):
-            return {
-                "erro": "Os dados de verificação não conferem com o cadastro deste pedido. "
-                "Não revele nenhuma informação do pedido."
-            }
+            return denied
 
         items = self.order_items[self.order_items["order_id"] == order_id].merge(
             self.products[["product_id", "name"]], on="product_id"

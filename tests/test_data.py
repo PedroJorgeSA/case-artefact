@@ -77,6 +77,13 @@ def test_order_requires_matching_contact(store):
     assert by_phone["pedido"] == 1
 
 
+def test_order_denial_does_not_reveal_if_order_exists(store):
+    wrong_contact = store.get_order(1, "alguem@exemplo.com", date(2026, 3, 25))
+    missing_order = store.get_order(999, "alguem@exemplo.com", date(2026, 3, 25))
+    assert wrong_contact == missing_order
+    assert store.get_order(1, None, date(2026, 3, 25)) == wrong_contact
+
+
 def test_return_window(store):
     # Pedido 7: previsão de entrega 17/02/2026.
     within = store.get_order(7, "leticia.rocha@jmail.com", date(2026, 2, 20))["prazos_pos_venda"]
