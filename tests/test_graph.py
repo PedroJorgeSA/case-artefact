@@ -68,6 +68,7 @@ def test_tool_call_then_answer():
     tool = next(e for e in events if e["type"] == "tool")
     assert tool["name"] == "detalhes_produto" and "R$ 1.967,18" in json.dumps(tool["result"], ensure_ascii=False)
     assert events[-2]["type"] == "reply" and events[-2]["text"] == "Está em promoção sim."
+    assert all("t" in e for e in events) and events[-1]["t"] >= events[0]["t"]
     assert [m["role"] for m in agent.messages] == ["user", "assistant", "tool", "assistant"]
     assert len(agent.log) == 1
 
@@ -141,7 +142,7 @@ def test_contacts_are_masked_in_tool_events():
 def test_rate_limit_is_announced_and_retried():
     agent, _ = make_agent(_rate_limit(), _message("Oi!"))
     events = list(agent.stream("oi"))
-    assert {"type": "waiting", "seconds": 3.0} in events
+    assert any(e["type"] == "waiting" and e["seconds"] == 3.0 for e in events)
     assert agent.messages[-1]["content"] == "Oi!"
 
 

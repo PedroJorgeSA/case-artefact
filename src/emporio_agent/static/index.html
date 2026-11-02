@@ -13,73 +13,96 @@
   <header class="topbar">
     <div class="brand">
       <span class="wordmark">Empório da Música</span>
-      <span class="brand-meta">Atendimento · case Artefact</span>
+      <span class="brand-meta">Atendimento com a Lia</span>
     </div>
-    <div class="topbar-right">
-      <span class="clock" id="clock" title="Relógio usado pela Lia (EMPORIO_NOW)">
-        <span class="status-dot" id="clock-dot"></span><span id="clock-text">Carregando</span>
-      </span>
-      <span class="model" id="model"></span>
-      <button class="btn btn-quiet trace-toggle" id="trace-toggle" type="button">
-        Consultas <span class="count" id="trace-toggle-count">0</span>
+    <dl class="pipeline" aria-label="Configuração do agente">
+      <div><dt>Relógio</dt><dd><span class="status-dot" id="clock-dot"></span><span id="clock-text">carregando</span></dd></div>
+      <div><dt>Modelo</dt><dd id="model">—</dd></div>
+      <div><dt>Manual</dt><dd id="search-mode">—</dd></div>
+      <div><dt>Roteador</dt><dd id="router-mode">—</dd></div>
+    </dl>
+    <div class="topbar-actions">
+      <button class="btn btn-quiet inspector-toggle" id="inspector-toggle" type="button" aria-controls="inspector" aria-expanded="false">
+        Por dentro <span class="count" id="turn-count">0</span>
       </button>
-      <button class="btn btn-secondary" id="new-chat" type="button" aria-label="Nova conversa">
+      <button class="btn btn-secondary" id="new-chat" type="button">
         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
         <span class="btn-text">Nova conversa</span>
       </button>
     </div>
   </header>
 
-  <main class="shell">
-    <section class="chat" aria-label="Conversa">
-      <div class="thread" id="thread">
-        <div class="intro" id="intro">
-          <h1>Converse com a Lia, a atendente virtual da loja</h1>
-          <p>Ela consulta catálogo, promoções e pedidos em tempo real e segue o manual de políticas da Empório. Cada consulta aparece no painel ao lado, com o que ela pediu e o que recebeu.</p>
-          <div class="suggestions">
-            <span class="label">Experimente</span>
-            <button type="button" class="suggestion">Tem violão até R$ 1.000?</button>
-            <button type="button" class="suggestion">O Crafter HT-100 está em promoção? Quanto fica em 12x?</button>
-            <button type="button" class="suggestion">Quero saber do meu pedido 8</button>
-            <button type="button" class="suggestion">Vocês vendem cordas e palhetas?</button>
-          </div>
+  <main class="chat" aria-label="Conversa com a Lia">
+    <div class="thread" id="thread" role="log" aria-live="off" aria-label="Mensagens" tabindex="0">
+      <section class="intro" id="intro">
+        <p class="eyebrow">Protótipo de atendimento · case Artefact</p>
+        <h1>Converse com a Lia, a atendente virtual da loja.</h1>
+        <p class="lede">Ela consulta o catálogo, os pedidos e o manual da loja. Cada resposta mostra de onde veio: as seções do manual citadas, as consultas feitas e a checagem dos valores. O caminho completo fica no painel ao lado.</p>
+        <div class="suggestions" role="group" aria-label="Perguntas de exemplo">
+          <button type="button" class="suggestion"><span class="kind">Catálogo</span>Quais violões vocês têm até R$ 1.000?</button>
+          <button type="button" class="suggestion"><span class="kind">Manual</span>Me arrependi da compra, posso devolver?</button>
+          <button type="button" class="suggestion"><span class="kind">Pedido</span>Qual o status do pedido 8? Meu e-mail é anacarol.ferreira@coldmail.com</button>
+          <button type="button" class="suggestion"><span class="kind">Promoção</span>O Takamine GD20 está em promoção?</button>
         </div>
-      </div>
+      </section>
+    </div>
 
-      <form class="composer" id="composer">
-        <div class="composer-box">
-          <textarea id="input" rows="1" placeholder="Escreva como um cliente" aria-label="Mensagem" maxlength="2000"></textarea>
-          <button class="send" id="send" type="submit" aria-label="Enviar">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
-          </button>
-        </div>
-        <p class="hint"><kbd>Enter</kbd> envia · <kbd>Shift</kbd> + <kbd>Enter</kbd> quebra a linha</p>
-      </form>
-    </section>
-
-    <aside class="trace" id="trace" aria-label="Consultas da Lia">
-      <div class="trace-head">
-        <h2>O que a Lia fez</h2>
-        <span class="count" id="trace-count">0 consultas</span>
+    <form class="composer" id="composer">
+      <label class="sr-only" for="input">Mensagem para a Lia</label>
+      <div class="composer-box">
+        <textarea id="input" rows="1" maxlength="2000" placeholder="Escreva como um cliente" autocomplete="off"></textarea>
+        <button class="btn btn-primary send" id="send" type="submit" disabled aria-label="Enviar">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </button>
       </div>
-      <div class="trace-body" id="trace-body">
-        <details class="testdata" id="testdata" open>
-          <summary>Pedidos para testar</summary>
-          <dl>
-              <div><dt>8</dt><dd>anacarol.ferreira@coldmail.com</dd><dd class="muted">enviado</dd></div>
-              <div><dt>7</dt><dd>leticia.rocha@jmail.com</dd><dd class="muted">entregue</dd></div>
-              <div><dt>1</dt><dd>(67) 98432-1098</dd><dd class="muted">entregue</dd></div>
-          </dl>
-          <p class="muted">Clientes fictícios do case. A Lia só mostra um pedido quando o contato confere com o cadastro.</p>
-        </details>
-        <div class="trace-empty" id="trace-empty">
-          <p class="trace-empty-title">Nenhuma consulta ainda</p>
-          <p>Quando a Lia precisar de um dado da loja, a chamada aparece aqui: a ferramenta usada, os parâmetros e a resposta que voltou.</p>
-        </div>
-      </div>
-    </aside>
+      <p class="hint"><kbd>Enter</kbd> envia · <kbd>Shift</kbd> + <kbd>Enter</kbd> quebra a linha · dados de teste em “Cenários”</p>
+    </form>
   </main>
 
+  <aside class="inspector" id="inspector" aria-label="Por dentro do atendimento">
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-trace" aria-controls="panel-trace" aria-selected="true">Percurso</button>
+      <button role="tab" id="tab-manual" aria-controls="panel-manual" aria-selected="false" tabindex="-1">Manual</button>
+      <button role="tab" id="tab-scenarios" aria-controls="panel-scenarios" aria-selected="false" tabindex="-1">Cenários</button>
+      <button class="btn btn-quiet close-inspector" id="close-inspector" type="button" aria-label="Fechar painel">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+
+    <section class="panel" id="panel-trace" role="tabpanel" aria-labelledby="tab-trace">
+      <figure class="graph" aria-label="Grafo do atendimento">
+        <svg id="graph" viewBox="0 0 400 112" role="img" aria-labelledby="graph-caption"></svg>
+        <figcaption id="graph-caption">Caminho da última mensagem no grafo (LangGraph). Em destaque, os nós por onde ela passou.</figcaption>
+      </figure>
+      <div class="trace" id="trace">
+        <p class="empty" id="trace-empty">Mande uma mensagem para ver, nó a nó, o que a Lia fez: a intenção detectada, os trechos do manual recuperados, as consultas, os tokens gastos e a checagem da resposta.</p>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-manual" role="tabpanel" aria-labelledby="tab-manual" hidden>
+      <p class="panel-note" id="manual-note">Seções indexadas do manual da loja. As citações [§] das respostas abrem aqui.</p>
+      <div class="manual" id="manual"></div>
+    </section>
+
+    <section class="panel" id="panel-scenarios" role="tabpanel" aria-labelledby="tab-scenarios" hidden>
+      <p class="panel-note">Conversas roteirizadas com resultado esperado. Rodar uma começa uma conversa nova, envia as mensagens em sequência e confere o resultado no fim.</p>
+      <div class="scenarios" id="scenarios"></div>
+      <details class="testdata">
+        <summary>Pedidos para testar à mão</summary>
+        <table>
+          <thead><tr><th>Pedido</th><th>Contato cadastrado</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">8</td><td class="mono">anacarol.ferreira@coldmail.com</td></tr>
+            <tr><td class="mono">7</td><td class="mono">leticia.rocha@jmail.com</td></tr>
+            <tr><td class="mono">1</td><td class="mono">(67) 98432-1098</td></tr>
+          </tbody>
+        </table>
+        <p>Com o contato errado, a Lia não mostra nada nem confirma se o pedido existe.</p>
+      </details>
+    </section>
+  </aside>
+
+  <div class="sr-only" role="status" aria-live="polite" id="announcer"></div>
   <script src="/static/app.js"></script>
 </body>
 </html>

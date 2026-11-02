@@ -9,6 +9,7 @@ usam os mesmos eventos. `send()` é o atalho que só devolve a resposta final.
 import re
 import sqlite3
 import threading
+import time
 import uuid
 from collections.abc import Iterator
 from functools import lru_cache
@@ -81,8 +82,11 @@ class Agent:
         """Processa uma mensagem do cliente, devolvendo eventos até a resposta final."""
         before = self.messages
         events: list[dict] = []
+        started = time.perf_counter()
         try:
             for event in self.graph.stream({"turn": {"raw": user_text}}, self.config, stream_mode="custom"):
+                # Milissegundos desde o início do turno, para a linha do tempo da interface.
+                event = {**event, "t": round((time.perf_counter() - started) * 1000)}
                 events.append(event)
                 yield event
         except BaseException:

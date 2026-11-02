@@ -92,6 +92,11 @@ def create_app(agent_factory: Callable[..., Agent] = Agent) -> FastAPI:
             "roteador": "ml" if load_classifier() else "palavras-chave",
         }
 
+    @app.get("/api/manual")
+    def manual():
+        index = load_index()
+        return {"modo": index.mode, "secoes": [{"id": c.id, "secao": c.path, "texto": c.body} for c in index.chunks]}
+
     @app.get("/api/scenarios")
     def scenarios():
         return [{k: s[k] for k in ("id", "titulo", "mostra", "mensagens")} for s in SCENARIOS]
